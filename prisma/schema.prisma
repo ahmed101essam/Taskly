@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @db.VarChar(60) @unique
+  firstName String @db.VarChar(60) @map("first_name")
+  lastName String @db.VarChar(60) @map("last_name")
+  email      String   @db.VarChar(60) @unique
+  photo      String?  @db.VarChar(200) // Nullable (optional)
+  password   String   @db.VarChar(60)
+  role       Role     @default(USER)
+  active     Boolean  @default(true)
+  online     Boolean  @default(false)
+  verificationToken String? @db.VarChar(200) @unique @map("verification_token") // Fixed typo & made unique
+  verificationTokenExpiresAt DateTime? @map("verification_token_expires_at")
+  verified   Boolean  @default(false)
+  project Project[]
+  projectMember ProjectMember[]
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  tasks      Task[] @relation(name: "TaskAssignee")  // No need to modify this
+  createdTasks   Task[] @relation(name: "TaskCreator")  
+  notification  Notification[]
+  comments Comment[]
+  @@map("user")
+}
+
+model Project {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(60)
+  description String? @db.VarChar(100)
+  photo String? @db.VarChar(200)
+  active Boolean @default(true)
+  completed Boolean @default(false)
+  managerId Int @map("manager_id")
+  manager User @relation(fields: [managerId],references: [id])
+  tasks Task[]
+  members ProjectMember[]
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("project")
+}
+
+
+model ProjectMember{
+  userId Int @map("user_id")
+  projectId Int @map("project_id")
+  user User @relation(fields: [userId],references: [id])
+  project Project @relation(fields: [projectId],references: [id])
+  invitationStatus InvitationStatus @default(PENDING)
+  active Boolean @default(true)
+  joinedAt DateTime @map("joined_at") 
+  @@id([userId,projectId])
+  @@map("project_member")
+}
+
+model Task{
+  id Int @id @default(autoincrement())
+  title String @db.VarChar(60)
+  description String? @db.VarChar(100)
+  assignedTo Int @map("assigned_to")
+  dueDate DateTime
+  status TaskStatus @default(ASSIGNED)
+  priority Priority
+  active Boolean @default(true)
+  createdBy Int @map("created_by")
+  projectId Int @map("project_id")
+  project Project @relation(fields: [projectId],references: [id])
+  creator User @relation(fields: [createdBy],references: [id],name: "TaskCreator")
+  member User @relation(fields: [assignedTo],references: [id],name: "TaskAssignee")
+  comments Comment[]
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  @@map("task")
+}
+
+model Comment{
+  id Int @id @default(autoincrement())
+  content String @db.VarChar(300)
+  createdBy Int @map("created_by")
+  taskId Int @map("task_id")
+  active Boolean @default(true)
+  task Task @relation(fields: [taskId],references: [id])
+  userId Int @map("user_id")
+  user User @relation(fields: [userId],references: [id])
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  @@map("comment")
+}
+
+model Notification {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  type        NotificationType
+  message     String    @db.Text
+  read        Boolean   @default(false)
+  targetId    Int?      // ID of the related entity (e.g., Project ID, Task ID)
+  targetType  TargetType? // Type of the related entity
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INVITATION
+  MESSAGE
+  TASK_UPDATE
+  GENERAL
+}
+
+enum TargetType {
+  PROJECT
+  TASK
+  MESSAGE
+  USER_PROFILE
+}
+
+enum Role{
+  USER
+  ADMIN
+}
+
+enum TaskStatus{
+  ASSIGNED
+  INPROGRESS
+  FINISHED
+}
+
+enum Priority{
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ProjectRole{
+  MEMBER
+  ADMIN
+}
+
+enum InvitationStatus{
+  PENDING
+  ACCEPTED
+}

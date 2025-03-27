@@ -1,0 +1,43 @@
+doctype html
+html
+  head
+    meta(charset="UTF-8")
+    title Taskly - Verify Your Account
+    style.
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        padding: 20px;
+        text-align: center;
+      }
+      .container {
+        max-width: 500px;
+        margin: auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+      .code {
+        font-size: 22px;
+        font-weight: bold;
+        color: #333;
+      }
+  
+  body
+    .container
+      h2 Welcome to Taskly, #{firstName}!
+      p Thank you for signing up. To complete your registration, please verify your email by entering the code below:
+      p.code #{token}
+      p The code will expire in 15 minutes.
+      p If you didn't sign up for Taskly, you can ignore this email.
+      p Need help? Contact us at 
+        a(href="mailto:support@taskly.com") support@taskly.com

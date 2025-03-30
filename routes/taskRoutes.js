@@ -9,6 +9,7 @@ const {
   updateDeleteAuthority,
   deleteTask,
 } = require("../controllers/taskController");
+const commentsRouter = require("./commentsRouter");
 
 const taskRouter = require("express").Router();
 
@@ -21,6 +22,6 @@ taskRouter
   .get(getTask)
   .delete(managerialAccess, updateDeleteAuthority, deleteTask);
 
-taskRouter.use("/:taskId/comments");
+taskRouter.use("/:taskId/comments", commentsRouter);
 
 module.exports = taskRouter;

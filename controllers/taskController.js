@@ -232,3 +232,72 @@ exports.myTasks = catchAsync(async (req, res, next) => {
     data: { tasks },
   });
 });
+
+exports.checkTaskExistanceAndAccess = catchAsync(async (req, res, next) => {
+  const taskId = Number(req.params.taskId);
+
+  // Check if task exists
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, active: true },
+  });
+
+  if (!task) {
+    return next(new AppError("The task id is invalid", 400));
+  }
+
+  // Check user access
+  const isTaskAssignedToThatUser = task.assignedTo === req.user.id;
+
+  const projectMembership = await prisma.projectMember.findFirst({
+    where: {
+      active: true,
+      userId: req.user.id,
+      projectId: req.project.id,
+    },
+  });
+
+  if (!projectMembership) {
+    return next(new AppError("You are not part of that project!", 403));
+  }
+
+  const isUserManagerOrSupervisor =
+    projectMembership.role === "MANAGER" ||
+    projectMembership.role === "SUPERVISOR";
+
+  if (!isTaskAssignedToThatUser && !isUserManagerOrSupervisor) {
+    return next(new AppError("You are forbidden to access that resource", 403));
+  }
+
+  req.task = task;
+  req.projectMembership = projectMembership;
+
+  next();
+});
+
+exports.managerialAccess = catchAsync(async (req, res, next) => {
+  if (
+    !req.user.projectRole === "MANAGER" &&
+    !req.user.projectRole === "SUPERVISOR"
+  ) {
+    return next(new AppError("Sorry you can't perform this action", 403));
+  }
+  next();
+});
+
+exports.getTask = catchAsync(async (req, res, next) => {
+  res.status(200).json({
+    status: "success",
+    data: {
+      task: req.task,
+    },
+  });
+});
+
+exports.updateDeleteAuthority = catchAsync(async (req, res, next) => {
+  if (
+    req.user.projectRole !== "MANAGER" &&
+    req.task.createdBy !== req.user.id
+  ) {
+    return next(new AppError("Sorry you can't perform this action", 403));
+  }
+});

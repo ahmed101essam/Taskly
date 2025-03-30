@@ -1,22 +1,25 @@
 const { protect } = require("../controllers/authController");
 const {
-  validateProjectOwnership,
-  validateProjectAuthority,
-} = require("../controllers/projectsController");
-const {
-  addProjectIdToParams,
   addTask,
+  checkTaskExistanceAndAccess,
+  updateTask,
+  getAllTasks,
+  managerialAccess,
+  getTask,
+  updateDeleteAuthority,
+  deleteTask,
 } = require("../controllers/taskController");
 
 const taskRouter = require("express").Router();
 
-taskRouter
-  .route("/")
-  .post(protect, addProjectIdToParams, validateProjectAuthority, addTask);
+taskRouter.route("/").all(managerialAccess).post(addTask).get(getAllTasks);
 
 taskRouter
   .route("/:taskId")
-  .patch(protect, addProjectIdToParams, validateProjectAuthority, editTask);
+  .all(checkTaskExistanceAndAccess)
+  .patch(managerialAccess, updateDeleteAuthority, updateTask)
+  .get(getTask)
+  .delete(managerialAccess, updateDeleteAuthority, deleteTask);
 
 taskRouter.use("/:taskId/comments");
 

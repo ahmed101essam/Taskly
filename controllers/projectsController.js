@@ -478,6 +478,8 @@ exports.validateProjectAccess = catchAsync(async (req, res, next) => {
     );
   }
 
+  req.user.projectRole = projectMembership.role;
+
   next();
 });
 

@@ -14,7 +14,10 @@ class Socket {
     this.io.use(
       catchAsyncSocket(async (socket, next) => {
         const token = socket.handshake.query.token;
+        console.log(socket.handshake);
 
+        console.log("Hello", token);
+        socket.emit("heelo", "hello");
         if (!token) {
           return next(
             new AppError("Authentication error: No token provided", 401)
@@ -30,7 +33,6 @@ class Socket {
           return next(new AppError("This token is invalid", 400));
         }
         socket.user = user;
-        next();
         next();
       })
     );
@@ -66,7 +68,7 @@ class Socket {
         },
       });
 
-      socket.emit("notification", notifications);
+      socket.emit("notifications", notifications);
 
       socket.on("disconnect", async () => {
         console.log("User disconnected:", socket.id);

@@ -7,32 +7,59 @@ const {
   addMember,
   deleteMember,
   acceptInvitation,
+  getAllManagerProjects,
+  validateProjectAuthority,
+  editMemberRole,
+  transferManagership,
+  getProject,
+  checkProjectExistance,
+  validateProjectAccess,
 } = require("../controllers/projectsController");
 const { uploadImage } = require("../utils/imageCloud");
 const upload = require("../utils/multer");
+const taskRouter = require("./taskRoutes");
 
 const projectRouter = require("express").Router();
 
 projectRouter.use(protect);
 
-projectRouter.route("/").post(upload.single("photo"), uploadImage, addProject);
+projectRouter
+  .route("/")
+  .post(upload.single("photo"), uploadImage, addProject)
+  .get(getAllManagerProjects);
 
 projectRouter
-  .route("/:id")
-  .all(validateProjectOwnership)
-  .patch(upload.single("photo"), uploadImage, updateProject)
-  .delete(deleteProject);
+  .route("/:projectId")
+  .get(checkProjectExistance, validateProjectAccess, getProject)
+  .patch(
+    validateProjectOwnership,
+    upload.single("photo"),
+    uploadImage,
+    updateProject
+  )
+  .delete(validateProjectOwnership, deleteProject);
 
 projectRouter
-  .route("/:id/members")
-  .all(validateProjectOwnership)
+  .route("/:projectId/members")
+  .all(validateProjectAuthority)
   .post(addMember);
 
 projectRouter
-  .route("/:id/members/:memberId")
+  .route("/:projectId/members/:memberId")
   .all(validateProjectOwnership)
-  .delete(deleteMember);
+  .delete(deleteMember)
+  .patch(editMemberRole)
+  .post(transferManagership);
 
-projectRouter.route("/:id/invitation/accept").post(protect, acceptInvitation);
+projectRouter
+  .route("/:projectId/invitation/accept")
+  .post(protect, acceptInvitation);
+
+projectRouter.use(
+  "/:projectId/tasks",
+  checkProjectExistance,
+  validateProjectAccess,
+  taskRouter
+);
 
 module.exports = projectRouter;

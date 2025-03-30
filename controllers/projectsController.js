@@ -38,6 +38,16 @@ exports.addProject = catchAsync(async (req, res, next) => {
     },
   });
 
+  await prisma.projectMember.create({
+    data: {
+      userId: user.id,
+      projectId: newProject.id,
+      role: "MANAGER",
+      memberStatus: "JOINED",
+      joinedAt: newProject.createdAt,
+    },
+  });
+
   res.status(201).json({
     // Changed status to 201 (Created)
     status: "success",
@@ -124,7 +134,7 @@ exports.deleteProject = catchAsync(async (req, res, next) => {
 exports.validateProjectOwnership = catchAsync(async (req, res, next) => {
   const project = await prisma.project.findFirst({
     where: {
-      id: req.params.id,
+      id: Number(req.params.projectId),
       active: true,
     },
   });
@@ -136,7 +146,60 @@ exports.validateProjectOwnership = catchAsync(async (req, res, next) => {
   }
 
   if (project.managerId !== req.user.id) {
-    return next(new AppError("You cannot delete this project", 403));
+    return next(new AppError("You don't own this project", 403));
+  }
+
+  req.project = project;
+  next();
+});
+
+exports.validateProjectAuthority = catchAsync(async (req, res, next) => {
+  const permittedRoles = ["MANAGER", "SUPERVISOR"];
+  const project = await prisma.project.findFirst({
+    where: {
+      id: Number(req.params.projectId),
+      active: true,
+    },
+  });
+
+  if (!project) {
+    return next(
+      new AppError("The project ID is wrong or it's no longer available", 400)
+    );
+  }
+  req.project = project;
+
+  const projectMembership = await prisma.projectMember.findFirst({
+    where: {
+      userId: req.user.id,
+      projectId: project.id,
+      active: true,
+      memberStatus: "JOINED",
+    },
+  });
+
+  if (!projectMembership) {
+    return next(new AppError("you do not belong to that project", 401));
+  }
+
+  if (!permittedRoles.includes(projectMembership.role)) {
+    return next(new AppError("You are forbidden to access that resource", 403));
+  }
+  next();
+});
+
+exports.checkProjectExistance = catchAsync(async (req, res, next) => {
+  const projectId = Number(req.params.projectId); // Convert to number if needed
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+  });
+
+  if (!project || !project.active) {
+    // Check if project is active (if applicable)
+    return next(
+      new AppError("The project ID is invalid or no longer exist", 400)
+    );
   }
 
   req.project = project;
@@ -144,7 +207,7 @@ exports.validateProjectOwnership = catchAsync(async (req, res, next) => {
 });
 
 exports.addMember = catchAsync(async (req, res, next) => {
-  const memberId = req.body.memberId;
+  const memberId = Number(req.body.memberId);
   if (!req.project.active) {
     return next(
       new AppError("Cannot modify members of an inactive project", 400)
@@ -235,6 +298,61 @@ exports.addMember = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.editMemberRole = catchAsync(async (req, res, next) => {
+  const memberId = Number(req.params.memberId);
+
+  const memberProjectship = await prisma.projectMember.findFirst({
+    where: {
+      userId: memberId,
+      projectId: req.project.id,
+      memberStatus: "JOINED",
+    },
+  });
+
+  if (!memberProjectship) {
+    return next(
+      new AppError(
+        "The member you want to edit doesn't exist in the project or hasn't joined yet",
+        400
+      )
+    );
+  }
+
+  const allowedFields = ["role"];
+  const allowedValues = ["MEMBER", "SUPERVISOR"];
+
+  const filteredBody = {};
+
+  Object.keys(req.body).map((k) => {
+    if (allowedFields.includes(k)) {
+      filteredBody[k] = req.body[k];
+    }
+  });
+
+  if (filteredBody.role) {
+    if (!allowedValues.includes(filteredBody.role)) {
+      return next(new AppError("The role you want to assign is invalid", 400));
+    }
+  }
+
+  const projectMember = await prisma.projectMember.update({
+    where: {
+      userId: memberId,
+      projectId: req.project.id,
+    },
+    data: {
+      role: filteredBody.role,
+    },
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      projectMember,
+    },
+  });
+});
+
 exports.deleteMember = catchAsync(async (req, res, next) => {
   const project = req.project;
 
@@ -270,8 +388,23 @@ exports.deleteMember = catchAsync(async (req, res, next) => {
     },
     data: {
       active: false,
+      memberStatus: "REMOVED",
     },
   });
+
+  const notification = await prisma.notification.create({
+    data: {
+      userId: memberId,
+      type: "PROJECTREMOVAL",
+      message: "The project owner has removed you from the project",
+      targetType: "PROJECT",
+      targetId: project.id,
+    },
+  });
+
+  if (req.app.get("socket")) {
+    req.app.get("socket").sendNotifications(memberId, notification);
+  }
 
   res.status(204).json({
     status: "success",
@@ -280,7 +413,7 @@ exports.deleteMember = catchAsync(async (req, res, next) => {
 });
 exports.acceptInvitation = catchAsync(async (req, res, next) => {
   const user = req.user;
-  const projectId = Number(req.params.id);
+  const projectId = Number(req.params.projectId);
 
   if (isNaN(projectId)) {
     return next(new AppError("Invalid project ID", 400));
@@ -297,7 +430,7 @@ exports.acceptInvitation = catchAsync(async (req, res, next) => {
     return next(new AppError("No invitation found for this project", 404));
   }
 
-  if (projectMembership.active) {
+  if (projectMembership.memberStatus === "JOINED") {
     return next(new AppError("You have already accepted this invitation", 400));
   }
 
@@ -313,6 +446,7 @@ exports.acceptInvitation = catchAsync(async (req, res, next) => {
       data: {
         active: true,
         joinedAt: new Date(), // No need for Date.now()
+        memberStatus: "JOINED",
       },
     }),
   ]);
@@ -323,6 +457,28 @@ exports.acceptInvitation = catchAsync(async (req, res, next) => {
       projectMember: updatedMembership[0],
     },
   });
+});
+
+exports.validateProjectAccess = catchAsync(async (req, res, next) => {
+  const projectMembership = await prisma.projectMember.findFirst({
+    where: {
+      projectId: req.project.id,
+      userId: req.user.id,
+      active: true,
+      memberStatus: "JOINED",
+    },
+  });
+
+  if (!projectMembership) {
+    return next(
+      new AppError(
+        "You are not authorized to access that project or You are no longer part of this project",
+        400
+      )
+    );
+  }
+
+  next();
 });
 
 exports.getAllManagerProjects = catchAsync(async (req, res, next) => {
@@ -342,6 +498,49 @@ exports.getAllManagerProjects = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+exports.leaveProject = catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
+  const projectId = Number(req.params.projectId);
+
+  // Find project membership first
+  const projectMembership = await prisma.projectMember.findFirst({
+    where: {
+      userId: userId,
+      projectId: projectId,
+      memberStatus: "JOINED", // Assuming "ACTIVE" means currently in the project
+      active: true,
+    },
+  });
+
+  if (!projectMembership) {
+    return next(
+      new AppError("You are not a member of this project or already left", 400)
+    );
+  }
+
+  // Update the project membership status
+  const updatedProject = await prisma.projectMember.update({
+    where: {
+      userId_projectId: {
+        userId: userId,
+        projectId: projectId,
+      },
+    },
+    data: {
+      memberStatus: "LEFT",
+      active: false,
+    },
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      projectMembership: updatedProject,
+    },
+  });
+});
+
 exports.getAllUserProjects = catchAsync(async (req, res, next) => {
   const id = req.user.id;
 
@@ -369,7 +568,7 @@ exports.getAllUserProjects = catchAsync(async (req, res, next) => {
 
 exports.getProject = catchAsync(async (req, res, next) => {
   const user = req.user;
-  const projectId = Number(req.params.id);
+  const projectId = Number(req.params.projectId);
 
   // check that the project id is valid
   const project = await prisma.project.findFirst({
@@ -407,4 +606,81 @@ exports.getProject = catchAsync(async (req, res, next) => {
   } else {
     return next(new AppError("You are not a part of that project", 403));
   }
+});
+
+exports.transferManagership = catchAsync(async (req, res, next) => {
+  const manager = req.user;
+  const project = req.project;
+  const newManagerId = req.body.newManagerId;
+
+  if (
+    !(await prisma.projectMember.findFirst({
+      where: {
+        userId: newManagerId,
+        projectId: project.id,
+      },
+    }))
+  ) {
+    return next(
+      new AppError(
+        "You can not make a user not belongs to the proejct as a manager"
+      )
+    );
+  }
+
+  await prisma.$transaction([
+    prisma.project.update({
+      where: {
+        id: project.id,
+      },
+      data: {
+        managerId: newManagerId,
+      },
+    }),
+    prisma.projectMember.update({
+      where: {
+        userId: newManagerId,
+        projectId: project.id,
+      },
+      data: {
+        role: "MANAGER",
+      },
+    }),
+    prisma.projectMember.update({
+      where: {
+        userId: manager.id,
+        projectId: project.id,
+      },
+      data: {
+        role: "MEMBER",
+      },
+    }),
+  ]);
+
+  const notification = await prisma.notification.create({
+    data: {
+      userId: newManagerId,
+      type: "PROJECTASSIGNMENT",
+      message: `You have been assigned as the manager of "${project.name}" by ${manager.firstName} ${manager.lastName}.`,
+      targetType: "PROJECT",
+      targetId: project.id,
+    },
+  });
+
+  if (req.app.get("socket")) {
+    req.app.get("socket").sendNotifications(newManagerId, notification);
+  }
+
+  const projectAfterModifications = await prisma.project.findUnique({
+    where: {
+      id: project.id,
+    },
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      project: projectAfterModifications,
+    },
+  });
 });

@@ -46,19 +46,13 @@ exports.addTask = catchAsync(async (req, res, next) => {
     },
   });
 
-  const notification = await prisma.notification.create({
-    data: {
-      userId: member.id,
-      type: "TASKASSIGNMENT",
-      targetType: "TASK",
-      targetId: task.id,
-      message: `${req.user.firstName} has assigned a task to you in ${req.project.name} project`,
-    },
-  });
-
-  if (req.app.get("socket")) {
-    req.app.get("socket").sendNotifications(member.id, notification);
-  }
+  await notify(
+    req,
+    projectMember,
+    `${req.user.firstName} has assigned a task to you in ${req.project.name} project`,
+    "TASKASSIGNMENT",
+    task.id
+  );
 
   res.status(201).json({
     status: "success",
@@ -131,6 +125,14 @@ exports.updateTask = catchAsync(async (req, res, next) => {
     data: filteredBody,
   });
 
+  await notify(
+    req,
+    updatedTask.assignedTo,
+    `${req.user.username} has updated the task assigned to you in project ${req.project.name} please check the updates`,
+    "TASKUPDATE",
+    updatedTask.id
+  );
+
   res.status(200).json({
     status: "success",
     data: {
@@ -162,6 +164,14 @@ exports.deleteTask = catchAsync(async (req, res, next) => {
     where: { id: task.id },
     data: { active: false },
   });
+
+  await notify(
+    req,
+    updatedTask.assignedTo,
+    `${req.user.username} has removed the task assigned to you in project ${req.project.name} please check the updates`,
+    "TASKREMOVAL",
+    task.id
+  );
 
   res.status(200).json({
     status: "success",
@@ -293,11 +303,65 @@ exports.getTask = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.updateDeleteAuthority = catchAsync(async (req, res, next) => {
+exports.updateAuthority = catchAsync(async (req, res, next) => {
   if (
     req.user.projectRole !== "MANAGER" &&
     req.task.createdBy !== req.user.id
   ) {
     return next(new AppError("Sorry you can't perform this action", 403));
   }
+});
+
+exports.deleteAuthority = catchAsync(async (req, res, next) => {
+  if (req.user.projectRole !== "MANAGER") {
+    return next(new AppError("Sorry you can't perform this action", 403));
+  }
+});
+
+const notify = async (req, userId, message, notificationType, taskId) => {
+  const notification = await prisma.notification.create({
+    data: {
+      userId: userId,
+      message: message,
+      targetType: "TASK",
+      type: notificationType,
+      projectId: req.project.id,
+      taskId: taskId,
+    },
+  });
+
+  if (req.app.get("socket")) {
+    req.app.get("socket").sendNotifications(userId, notification);
+  }
+};
+
+exports.doesItAssignedToMe = (req, res, next) => {
+  if (req.task.assignedTo !== req.user.id) {
+    return next(
+      new AppError("Sorry you are forbidden to enter that route", 403)
+    );
+  }
+  next();
+};
+
+exports.doneTask = catchAsync(async (req, res, next) => {
+  const updatedTask = await prisma.task.update({
+    where: {
+      id: req.task.id,
+    },
+    data: {
+      status: "FINISHED",
+    },
+  });
+  notify(
+    req,
+    updatedTask.createdBy,
+    `${req.user.username} has finished the task assigned to him ${updatedTask.title}`,
+    "TASKUPDATE",
+    updatedTask.id
+  );
+  res.status(200).json({
+    status: "success",
+    message: "The task has been done successfully",
+  });
 });

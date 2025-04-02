@@ -1,26 +1,28 @@
-const { protect } = require("../controllers/authController");
 const {
+  managerialAccess,
+  getAllTasks,
   addTask,
   checkTaskExistanceAndAccess,
-  updateTask,
-  getAllTasks,
-  managerialAccess,
   getTask,
-  updateDeleteAuthority,
+  updateTask,
   deleteTask,
+  updateAuthority,
+  deleteAuthority,
 } = require("../controllers/taskController");
 const commentsRouter = require("./commentsRouter");
-
 const taskRouter = require("express").Router();
 
-taskRouter.route("/").all(managerialAccess).post(addTask).get(getAllTasks);
+taskRouter
+  .route("/")
+  .get(managerialAccess, getAllTasks)
+  .post(managerialAccess, addTask);
 
 taskRouter
   .route("/:taskId")
   .all(checkTaskExistanceAndAccess)
-  .patch(managerialAccess, updateDeleteAuthority, updateTask)
   .get(getTask)
-  .delete(managerialAccess, updateDeleteAuthority, deleteTask);
+  .patch(updateAuthority, updateTask)
+  .delete(deleteAuthority, deleteTask);
 
 taskRouter.use("/:taskId/comments", commentsRouter);
 

@@ -3,6 +3,7 @@ const {
   verifyAccount,
   login,
   protect,
+  resendVerificationToken,
 } = require("../controllers/authController");
 const { getAllManagerProjects } = require("../controllers/projectsController");
 const { myTasks } = require("../controllers/taskController");
@@ -16,6 +17,7 @@ const userRouter = require("express").Router();
 userRouter.post("/signup", upload.single("photo"), uploadImage, signup);
 userRouter.post("/verify", verifyAccount);
 userRouter.post("/login", login);
+userRouter.post("/resendVerification", resendVerificationToken);
 userRouter
   .route("/me")
   .all(protect)

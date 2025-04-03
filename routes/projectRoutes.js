@@ -14,6 +14,7 @@ const {
   getProject,
   checkProjectExistance,
   validateProjectAccess,
+  getAllMembers
 } = require("../controllers/projectsController");
 const { uploadImage } = require("../utils/imageCloud");
 const upload = require("../utils/multer");

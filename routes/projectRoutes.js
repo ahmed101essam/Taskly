@@ -42,7 +42,8 @@ projectRouter
 projectRouter
   .route("/:projectId/members")
   .all(validateProjectAuthority)
-  .post(addMember);
+  .post(addMember)
+  .get(getAllMembers);
 
 projectRouter
   .route("/:projectId/members/:memberId")

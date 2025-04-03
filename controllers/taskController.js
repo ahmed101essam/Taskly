@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 exports.addTask = catchAsync(async (req, res, next) => {
   let project = req.project;
   let authorizedMember = req.user;
-  let assignedMemberId = req.body.assignedTo;
+  let assignedMemberId = Number(req.body.assignedTo);
 
   let member = await prisma.user.findFirst({
     where: {

@@ -11,6 +11,7 @@ exports.getAllMembers = catchAsync(async (req, res, next) => {
     where: {
       projectId: req.project.id,
       active: true,
+      memberStatus: "JOINED",
     },
   });
   res.status(200).json({
@@ -590,6 +591,13 @@ exports.getProject = catchAsync(async (req, res, next) => {
     where: {
       id: projectId,
       active: true,
+    },
+    include: {
+      members: {
+        include: {
+          user: true,
+        },
+      },
     },
   });
 

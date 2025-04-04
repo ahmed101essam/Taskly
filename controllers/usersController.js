@@ -16,6 +16,49 @@ exports.readNotifications = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.search = catchAsync(async (req, res, next) => {
+  const { query } = req.query;
+
+  if (!query || !query.trim()) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Query parameter is required",
+    });
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        {
+          username: {
+            contains: query,
+            mode: "insensitive",
+          },
+        },
+        {
+          email: {
+            contains: query,
+            mode: "insensitive",
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+    },
+    take: 10, // Limit results
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: users,
+  });
+});
+
 exports.me = catchAsync(async (req, res, next) => {
   const user = await prisma.user.findUnique({
     where: {

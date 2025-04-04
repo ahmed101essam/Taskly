@@ -7,13 +7,14 @@ const {
 } = require("../controllers/authController");
 const { getAllManagerProjects } = require("../controllers/projectsController");
 const { myTasks } = require("../controllers/taskController");
-const { me, updateMe } = require("../controllers/usersController");
+const { me, updateMe, search } = require("../controllers/usersController");
 const { uploadImage } = require("../utils/imageCloud");
 const upload = require("../utils/multer");
 const { use } = require("./taskRoutes");
 
 const userRouter = require("express").Router();
 
+userRouter.get("/search", protect, search);
 userRouter.post("/signup", upload.single("photo"), uploadImage, signup);
 userRouter.post("/verify", verifyAccount);
 userRouter.post("/login", login);

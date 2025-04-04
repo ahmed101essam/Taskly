@@ -6,16 +6,17 @@ const crypto = require("crypto");
 
 const prisma = new PrismaClient();
 
-exports.getAllMembers = catchAsync(async(req,res,next)=>{
+exports.getAllMembers = catchAsync(async (req, res, next) => {
   const members = await prisma.projectMember.findMany({
-    where:{
-      projectId:req.project.id,
-    }
-  })
+    where: {
+      projectId: req.project.id,
+      active: true,
+    },
+  });
   res.status(200).json({
-    data:{members}
-  })
-})
+    data: { members },
+  });
+});
 
 exports.addProject = catchAsync(async (req, res, next) => {
   const user = req.user;

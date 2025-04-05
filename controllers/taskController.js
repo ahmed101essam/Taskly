@@ -46,6 +46,7 @@ exports.addTask = catchAsync(async (req, res, next) => {
     },
   });
 
+  console.log(projectMember.id);
   await notify(
     req,
     projectMember.id,

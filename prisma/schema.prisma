@@ -31,8 +31,6 @@ model User {
   projectMember ProjectMember[]
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
-  tasks      Task[] @relation(name: "TaskAssignee")  // No need to modify this
-  createdTasks   Task[] @relation(name: "TaskCreator")  
   notification  Notification[]
   comments Comment[]
   @@map("user")
@@ -65,6 +63,8 @@ model ProjectMember{
   joinedAt DateTime? @map("joined_at") 
   role MemberRole @default(MEMBER)
   memberStatus MemberStatus @default(INVITATIONPENDING)
+  tasks      Task[] @relation(name: "TaskAssignee")  // No need to modify this
+  createdTasks   Task[] @relation(name: "TaskCreator")
   @@id([userId,projectId])
   @@map("project_member")
 }
@@ -81,8 +81,8 @@ model Task{
   createdBy Int @map("created_by")
   projectId Int @map("project_id")
   project Project @relation(fields: [projectId],references: [id])
-  creator User @relation(fields: [createdBy],references: [id],name: "TaskCreator")
-  member User @relation(fields: [assignedTo],references: [id],name: "TaskAssignee")
+  creator  ProjectMember @relation(fields: [createdBy,projectId],references:[userId,projectId],name: "TaskCreator")
+  member  ProjectMember @relation(fields: [assignedTo,projectId],references: [userId , projectId],name: "TaskAssignee")
   comments Comment[]
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")

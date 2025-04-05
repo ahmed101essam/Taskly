@@ -90,7 +90,7 @@ exports.verifyAccount = catchAsync(async (req, res, next) => {
 });
 
 exports.login = catchAsync(async (req, res, next) => {
-  const usernameOrEmail = req.body.usernameOrEmail.toLowerCase();
+  const usernameOrEmail = req.body.usernameOrEmail;
   const password = req.body.password;
   const user = await prisma.user.findFirst({
     where: {

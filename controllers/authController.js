@@ -120,13 +120,13 @@ exports.login = catchAsync(async (req, res, next) => {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
 
-  res.cookie("jwt", token, {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000
-    ),
-    // secure: true,
-    httpOnly: true,
-  });
+  // res.cookie("jwt", token, {
+  //   limit: new Date(
+  //     Date.now() + process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000
+  //   ),
+  //   // secure: true,
+  //   httpOnly: true,
+  // });
 
   res.status(200).json({
     status: "success",

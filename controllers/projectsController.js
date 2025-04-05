@@ -282,7 +282,7 @@ exports.addMember = catchAsync(async (req, res, next) => {
       userId: member.id,
       type: "INVITATION",
       message: `You have been invited to a project ${req.project.name} by ${req.user.username}`,
-      targetId: req.project.id,
+      projectId: req.project.id,
       targetType: "PROJECT",
     },
   });
@@ -412,7 +412,7 @@ exports.deleteMember = catchAsync(async (req, res, next) => {
       type: "PROJECTREMOVAL",
       message: "The project owner has removed you from the project",
       targetType: "PROJECT",
-      targetId: project.id,
+      projectId: project.id,
     },
   });
 
@@ -686,7 +686,7 @@ exports.transferManagership = catchAsync(async (req, res, next) => {
       type: "PROJECTASSIGNMENT",
       message: `You have been assigned as the manager of "${project.name}" by ${manager.firstName} ${manager.lastName}.`,
       targetType: "PROJECT",
-      targetId: project.id,
+      projectId: project.id,
     },
   });
 

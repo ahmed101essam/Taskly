@@ -15,6 +15,18 @@ exports.addComment = catchAsync(async (req, res, next) => {
       taskId: req.task.id,
       userId: req.user.id,
     },
+    select: {
+      content: true,
+      id: true,
+      createdAt: true,
+      user: {
+        select: {
+          photo: true,
+          username: true,
+          id: true,
+        },
+      },
+    },
   });
 
   notify(req, comment.id, "commented");

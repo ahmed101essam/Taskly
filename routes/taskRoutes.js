@@ -8,6 +8,7 @@ const {
   deleteTask,
   updateAuthority,
   deleteAuthority,
+  doesItAssignedToMe,
 } = require("../controllers/taskController");
 const commentsRouter = require("./commentsRouter");
 const taskRouter = require("express").Router();
@@ -23,6 +24,8 @@ taskRouter
   .get(getTask)
   .patch(updateAuthority, updateTask)
   .delete(deleteAuthority, deleteTask);
+
+taskRouter.route("/:taskId/done").patch(doesItAssignedToMe);
 
 taskRouter.use("/:taskId/comments", commentsRouter);
 

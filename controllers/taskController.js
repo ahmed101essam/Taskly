@@ -9,6 +9,8 @@ exports.addTask = catchAsync(async (req, res, next) => {
   let authorizedMember = req.user;
   let assignedMemberId = Number(req.body.assignedTo);
 
+  console.log(req.body);
+
   let member = await prisma.user.findFirst({
     where: {
       id: assignedMemberId,
@@ -27,6 +29,7 @@ exports.addTask = catchAsync(async (req, res, next) => {
       memberStatus: "JOINED",
     },
   });
+  console.log(projectMember);
 
   if (!projectMember) {
     return next(
@@ -49,7 +52,7 @@ exports.addTask = catchAsync(async (req, res, next) => {
   console.log(projectMember.id);
   await notify(
     req,
-    projectMember.id,
+    projectMember.userId,
     `${req.user.firstName} has assigned a task to you in ${req.project.name} project`,
     "TASKASSIGNMENT",
     task.id

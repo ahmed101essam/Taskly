@@ -189,10 +189,6 @@ exports.getAllTasks = catchAsync(async (req, res, next) => {
       projectId: req.project.id,
       active: true,
     },
-    include: {
-      member: true,
-      creator: true,
-    },
     select: {
       id: true,
       title: true,

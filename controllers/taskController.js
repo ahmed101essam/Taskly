@@ -195,24 +195,31 @@ exports.getAllTasks = catchAsync(async (req, res, next) => {
       description: true,
       dueDate: true,
       priority: true,
-      createdBy: true,
       status: true,
       createdAt: true,
       updatedAt: true,
       member: {
         select: {
-          username: true,
-          photo: true,
-          id: true,
-          email: true,
+          user: {
+            select: {
+              username: true,
+              photo: true,
+              id: true,
+              email: true,
+            },
+          },
         },
       },
       creator: {
         select: {
-          username: true,
-          photo: true,
-          id: true,
-          email: true,
+          user: {
+            select: {
+              username: true,
+              photo: true,
+              id: true,
+              email: true,
+            },
+          },
         },
       },
     },
@@ -355,6 +362,7 @@ exports.managerialAccess = catchAsync(async (req, res, next) => {
 });
 
 exports.getTask = catchAsync(async (req, res, next) => {
+  console.log(req.task);
   const task = await prisma.task.findFirst({
     where: {
       id: req.task.id,
@@ -371,6 +379,19 @@ exports.getTask = catchAsync(async (req, res, next) => {
         select: {
           role: true,
           user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              photo: true,
+            },
+          },
+        },
+      },
+      creator: {
+        role: true,
+        user: {
+          select: {
             id: true,
             username: true,
             email: true,
@@ -378,21 +399,12 @@ exports.getTask = catchAsync(async (req, res, next) => {
           },
         },
       },
-      creator: {
-        role: true,
-        user: {
-          id: true,
-          username: true,
-          email: true,
-          photo: true,
-        },
-      },
     },
   });
   res.status(200).json({
     status: "success",
     data: {
-      task: req.task,
+      task: task,
     },
   });
 });

@@ -127,12 +127,12 @@ exports.login = catchAsync(async (req, res, next) => {
   //   // secure: true,
   //   httpOnly: true,
   // });
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: false, // set false in development if not using HTTPS
-    sameSite: "None", // required for cross-site cookies
-    maxAge: 24 * 60 * 60 * 1000,
-  });
+  // res.cookie("token", token, {
+  //   httpOnly: true,
+  //   secure: false, // set false in development if not using HTTPS
+  //   sameSite: "None", // required for cross-site cookies
+  //   maxAge: 24 * 60 * 60 * 1000,
+  // });
 
   res.status(200).json({
     status: "success",
@@ -141,16 +141,16 @@ exports.login = catchAsync(async (req, res, next) => {
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
-  // let token;
+  let token;
 
-  // Ensure Authorization header is present and well-formed
-  // if (
-  //   req.headers.authorization &&
-  //   req.headers.authorization.startsWith("Bearer ")
-  // ) {
-  //   token = req.headers.authorization.split(" ")[1];
-  // }
-  const token = req.cookies.token;
+  Ensure Authorization header is present and well-formed
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer ")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+  // const token = req.cookies.token;
 
   if (!token) {
     return next(

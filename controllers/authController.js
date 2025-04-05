@@ -129,7 +129,7 @@ exports.login = catchAsync(async (req, res, next) => {
   // });
   res.cookie("token", token, {
     httpOnly: true,
-    // secure: true,        // set false in development if not using HTTPS
+    secure: false, // set false in development if not using HTTPS
     sameSite: "None", // required for cross-site cookies
     maxAge: 24 * 60 * 60 * 1000,
   });

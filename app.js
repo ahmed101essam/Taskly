@@ -4,6 +4,7 @@ const projectRouter = require("./routes/projectRoutes");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 
@@ -17,7 +18,9 @@ const limiter = rateLimit({
   message: "Too many requests from that IP please try again in an hour",
 });
 app.use("/api", limiter);
+
 app.use(express.json({ limit: "10kb" }));
+app.use(cookieParser());
 
 app.use(async (req, res, next) => {
   console.log(req.headers);

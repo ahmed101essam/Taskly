@@ -389,13 +389,15 @@ exports.getTask = catchAsync(async (req, res, next) => {
         },
       },
       creator: {
-        role: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            photo: true,
+        select: {
+          role: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              photo: true,
+            },
           },
         },
       },

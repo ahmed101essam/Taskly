@@ -305,6 +305,9 @@ exports.checkTaskExistanceAndAccess = catchAsync(async (req, res, next) => {
   // Check if task exists
   const task = await prisma.task.findFirst({
     where: { id: taskId, active: true },
+    select: {
+      id: true,
+    },
   });
 
   if (!task) {
@@ -351,6 +354,40 @@ exports.managerialAccess = catchAsync(async (req, res, next) => {
 });
 
 exports.getTask = catchAsync(async (req, res, next) => {
+  const task = await prisma.task.findFirst({
+    where: {
+      id: req.task.id,
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      dueDate: true,
+      priority: true,
+      createdAt: true,
+      comments: true,
+      member: {
+        select: {
+          role: true,
+          user: {
+            id: true,
+            username: true,
+            email: true,
+            photo: true,
+          },
+        },
+      },
+      creator: {
+        role: true,
+        user: {
+          id: true,
+          username: true,
+          email: true,
+          photo: true,
+        },
+      },
+    },
+  });
   res.status(200).json({
     status: "success",
     data: {

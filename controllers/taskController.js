@@ -189,6 +189,36 @@ exports.getAllTasks = catchAsync(async (req, res, next) => {
       projectId: req.project.id,
       active: true,
     },
+    include: {
+      member: true,
+      creator: true,
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      dueDate: true,
+      priority: true,
+      createdBy: true,
+      createdAt: true,
+      updatedAt: true,
+      member: {
+        select: {
+          username: true,
+          photo: true,
+          id: true,
+          email: true,
+        },
+      },
+      creator: {
+        select: {
+          username: true,
+          photo: true,
+          id: true,
+          email: true,
+        },
+      },
+    },
   });
   res.status(200).json({
     status: "success",

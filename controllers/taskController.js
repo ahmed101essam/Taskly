@@ -268,6 +268,7 @@ exports.myTasks = catchAsync(async (req, res, next) => {
       dueDate: "asc",
     },
     select: {
+      id: true,
       title: true,
       description: true,
       dueDate: true,

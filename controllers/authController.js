@@ -14,7 +14,9 @@ exports.signup = catchAsync(async (req, res, next) => {
     password: req.body.password,
     firstName: req.body.firstName,
     lastName: req.body.lastName,
+    photo: req.body.photo,
   };
+  console.log(req.body.photo);
 
   const existingEmail = await prisma.user.findUnique({
     where: { email: user.email },

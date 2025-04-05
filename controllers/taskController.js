@@ -196,6 +196,7 @@ exports.getAllTasks = catchAsync(async (req, res, next) => {
       dueDate: true,
       priority: true,
       createdBy: true,
+      status: true,
       createdAt: true,
       updatedAt: true,
       member: {

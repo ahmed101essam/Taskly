@@ -143,7 +143,7 @@ exports.login = catchAsync(async (req, res, next) => {
 exports.protect = catchAsync(async (req, res, next) => {
   let token;
 
-  Ensure Authorization header is present and well-formed
+  // Ensure Authorization header is present and well-formed
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer ")

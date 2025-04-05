@@ -48,7 +48,7 @@ exports.addTask = catchAsync(async (req, res, next) => {
 
   await notify(
     req,
-    projectMember,
+    projectMember.id,
     `${req.user.firstName} has assigned a task to you in ${req.project.name} project`,
     "TASKASSIGNMENT",
     task.id

@@ -267,6 +267,31 @@ exports.myTasks = catchAsync(async (req, res, next) => {
     orderBy: {
       dueDate: "asc",
     },
+    select: {
+      title: true,
+      description: true,
+      dueDate: true,
+      status: true,
+      priority: true,
+      project: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      creator: {
+        select: {
+          user: {
+            select: {
+              username: true,
+              email: true,
+              photo: true,
+            },
+          },
+        },
+      },
+      createdAt: true,
+    },
   });
   res.status(200).json({
     status: "success",

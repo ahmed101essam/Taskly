@@ -596,6 +596,7 @@ exports.getProject = catchAsync(async (req, res, next) => {
       },
       members: {
         select: {
+          memberStatus: true,
           role: true,
           user: {
             select: {

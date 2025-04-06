@@ -13,11 +13,11 @@ class Socket {
     this.users = new Map();
     this.io.use(
       catchAsyncSocket(async (socket, next) => {
-        const token = socket.handshake.query.token;
+        const token = socket.handshake.auth.token;
         console.log(socket.handshake);
 
         console.log("Hello", token);
-        socket.emit("heelo", "hello");
+        socket.emit("hello", "hello");
         if (!token) {
           return next(
             new AppError("Authentication error: No token provided", 401)

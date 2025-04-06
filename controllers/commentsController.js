@@ -121,6 +121,10 @@ exports.updateComment = catchAsync(async (req, res, next) => {
     );
   }
 
+  if (!req.body.content.trim().length === 0) {
+    new AppError("Please provide content to be updated by", 400);
+  }
+
   comment = await prisma.comment.update({
     where: { id: comment.id },
     data: { content: req.body.content.trim() },
@@ -147,6 +151,18 @@ const allTheInvolvedExceptTheOneWhoCommented = async (req) => {
     },
   });
 
+  if (involvedUsers.length === 0) {
+    if (req.user.id === req.task.assignedTo)
+      involvedUsers.push({ userId: req.task.createdBy });
+    else if (req.user.id === req.task.createdBy)
+      involvedUsers.push({ userId: req.task.assignedTo });
+    else
+      involvedUsers.push(
+        { userId: req.task.createdBy },
+        { userId: req.task.assignedTo }
+      );
+  }
+
   return involvedUsers;
 };
 
@@ -160,6 +176,7 @@ const notifyTheInvloved = async (req, message, commentId, involvedUsers) => {
         taskId: req.task.id,
         commentId: commentId,
         targetType: "COMMENT",
+        type: "COMMENT",
       },
     });
 

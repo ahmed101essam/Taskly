@@ -302,6 +302,7 @@ exports.checkTaskExistanceAndAccess = catchAsync(async (req, res, next) => {
       id: true,
       assignedTo: true,
       title: true,
+      createdBy: true,
     },
   });
 

@@ -34,6 +34,10 @@ taskRouter
   .route("/:taskId/done")
   .patch(checkTaskExistanceAndAccess, doesItAssignedToMe, doneTask);
 
-taskRouter.use("/:taskId/comments", commentsRouter);
+taskRouter.use(
+  "/:taskId/comments",
+  checkTaskExistanceAndAccess,
+  commentsRouter
+);
 
 module.exports = taskRouter;

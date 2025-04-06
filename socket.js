@@ -13,7 +13,7 @@ class Socket {
     this.users = new Map();
     this.io.use(
       catchAsyncSocket(async (socket, next) => {
-        const token = socket.handshake.auth.token;
+        const token = socket.handshake.query.token;
         console.log(socket.handshake);
 
         console.log("Hello", token);

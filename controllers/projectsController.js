@@ -2,8 +2,6 @@ const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { PrismaClient } = require("@prisma/client");
 const Email = require("../utils/email");
-const crypto = require("crypto");
-
 const prisma = new PrismaClient();
 
 exports.getAllMembers = catchAsync(async (req, res, next) => {
@@ -68,7 +66,6 @@ exports.addProject = catchAsync(async (req, res, next) => {
     data: { project: newProject },
   });
 });
-
 exports.updateProject = catchAsync(async (req, res, next) => {
   const project = req.project;
 
@@ -144,14 +141,8 @@ exports.deleteProject = catchAsync(async (req, res, next) => {
 
   res.status(204).send(); // Proper empty response for 204 status
 });
-
 exports.validateProjectOwnership = catchAsync(async (req, res, next) => {
-  const project = await prisma.project.findFirst({
-    where: {
-      id: Number(req.params.projectId),
-      active: true,
-    },
-  });
+  const project = req.project;
 
   if (!project) {
     return next(
@@ -169,19 +160,7 @@ exports.validateProjectOwnership = catchAsync(async (req, res, next) => {
 
 exports.validateProjectAuthority = catchAsync(async (req, res, next) => {
   const permittedRoles = ["MANAGER", "SUPERVISOR"];
-  const project = await prisma.project.findFirst({
-    where: {
-      id: Number(req.params.projectId),
-      active: true,
-    },
-  });
-
-  if (!project) {
-    return next(
-      new AppError("The project ID is wrong or it's no longer available", 400)
-    );
-  }
-  req.project = project;
+  const project = req.project;
 
   const projectMembership = await prisma.projectMember.findFirst({
     where: {
@@ -219,7 +198,6 @@ exports.checkProjectExistance = catchAsync(async (req, res, next) => {
   req.project = project;
   next();
 });
-
 exports.addMember = catchAsync(async (req, res, next) => {
   const memberId = Number(req.body.memberId);
   if (!req.project.active) {
@@ -505,6 +483,14 @@ exports.getAllManagerProjects = catchAsync(async (req, res, next) => {
       managerId: id,
       active: true,
     },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      photo: true,
+      completed: true,
+      createdAt: true,
+    },
   });
 
   res.status(200).json({
@@ -583,52 +569,45 @@ exports.getAllUserProjects = catchAsync(async (req, res, next) => {
 });
 
 exports.getProject = catchAsync(async (req, res, next) => {
-  const user = req.user;
-  const projectId = Number(req.params.projectId);
-
-  // check that the project id is valid
-  const project = await prisma.project.findFirst({
+  const project = await prisma.project.findUnique({
     where: {
-      id: projectId,
-      active: true,
+      id: req.project.id,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      photo: true,
+      completed: true,
+      createdAt: true,
+      manager: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          photo: true,
+        },
+      },
       members: {
-        include: {
-          user: true,
+        select: {
+          role: true,
+          user: {
+            select: {
+              username: true,
+              id: true,
+              photo: true,
+            },
+          },
         },
       },
     },
   });
-
-  if (!project) {
-    return next(
-      new AppError(
-        "The project id is invalid or the project is no longer exists",
-        400
-      )
-    );
-  }
-  // check that the user is manager or member in it
-
-  const membership = await prisma.projectMember.findFirst({
-    where: {
-      projectId: projectId,
-      active: true,
-      userId: user.id,
+  res.status(200).json({
+    status: "success",
+    data: {
+      project: project,
     },
   });
-
-  if (project.managerId === user.id || membership) {
-    res.status(200).json({
-      status: "success",
-      data: {
-        project: project,
-      },
-    });
-  } else {
-    return next(new AppError("You are not a part of that project", 403));
-  }
 });
 
 exports.transferManagership = catchAsync(async (req, res, next) => {

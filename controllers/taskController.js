@@ -364,6 +364,7 @@ exports.getTask = catchAsync(async (req, res, next) => {
       priority: true,
       createdAt: true,
       comments: true,
+      status: true,
       member: {
         select: {
           role: true,

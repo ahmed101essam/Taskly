@@ -14,7 +14,7 @@ const {
   getProject,
   checkProjectExistance,
   validateProjectAccess,
-  getAllMembers
+  getAllMembers,
 } = require("../controllers/projectsController");
 const { uploadImage } = require("../utils/imageCloud");
 const upload = require("../utils/multer");
@@ -31,7 +31,8 @@ projectRouter
 
 projectRouter
   .route("/:projectId")
-  .get(checkProjectExistance, validateProjectAccess, getProject)
+  .all(checkProjectExistance)
+  .get(validateProjectAccess, getProject)
   .patch(
     validateProjectOwnership,
     upload.single("photo"),
@@ -42,8 +43,8 @@ projectRouter
 
 projectRouter
   .route("/:projectId/members")
-  .all(validateProjectAuthority)
-  .post(addMember)
+  .all(checkProjectExistance)
+  .post(validateProjectAuthority, addMember)
   .get(getAllMembers);
 
 projectRouter

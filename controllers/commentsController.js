@@ -44,6 +44,17 @@ exports.getTaskComments = catchAsync(async (req, res, next) => {
       active: true,
     },
     orderBy: { createdAt: "asc" },
+    select: {
+      content: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          username: true,
+          photo: true,
+        },
+      },
+    },
   });
 
   res.status(200).json({

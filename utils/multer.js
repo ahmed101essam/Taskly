@@ -1,14 +1,20 @@
 const multer = require("multer");
 const path = require("path");
 
+const fs = require("fs");
+const publicDir = "/app/public";
+
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../public")); // Better path handling
+    cb(null, "/app/public"); // Absolute path for Railway
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname); // Get original extension
-    cb(null, file.fieldname + "-" + uniqueSuffix + ext); // Keep extension
+    const ext = path.extname(file.originalname);
+    cb(null, `photo-${Date.now()}${ext}`); // Simpler filename
   },
 });
 

@@ -44,40 +44,6 @@ exports.addTask = catchAsync(async (req, res, next) => {
       createdBy: authorizedMember.id,
       projectId: req.project.id,
     },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      dueDate: true,
-      priority: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-      member: {
-        select: {
-          user: {
-            select: {
-              username: true,
-              photo: true,
-              id: true,
-              email: true,
-            },
-          },
-        },
-      },
-      creator: {
-        select: {
-          user: {
-            select: {
-              username: true,
-              photo: true,
-              id: true,
-              email: true,
-            },
-          },
-        },
-      },
-    },
   });
   await notify(
     req,

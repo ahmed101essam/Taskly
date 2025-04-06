@@ -29,14 +29,11 @@ exports.addTask = catchAsync(async (req, res, next) => {
       memberStatus: "JOINED",
     },
   });
-  console.log(projectMember);
-
   if (!projectMember) {
     return next(
       new AppError("The user id you provided doesn't exist in the project", 400)
     );
   }
-
   const task = await prisma.task.create({
     data: {
       title: req.body.title,
@@ -48,8 +45,6 @@ exports.addTask = catchAsync(async (req, res, next) => {
       projectId: req.project.id,
     },
   });
-
-  console.log(projectMember.id);
   await notify(
     req,
     projectMember.userId,
@@ -57,22 +52,12 @@ exports.addTask = catchAsync(async (req, res, next) => {
     "TASKASSIGNMENT",
     task.id
   );
-
   res.status(201).json({
     status: "success",
     data: {
       task,
     },
   });
-});
-
-exports.addProjectIdToParams = catchAsync(async (req, res, next) => {
-  if (!req.body.projectId) {
-    return next(new AppError("The project id you provided is invalid", 400));
-  }
-
-  req.params.projectId = req.body.projectId;
-  next();
 });
 
 exports.updateTask = catchAsync(async (req, res, next) => {
@@ -85,7 +70,7 @@ exports.updateTask = catchAsync(async (req, res, next) => {
   ];
   const filteredBody = {};
 
-  const taskId = req.params.taskId;
+  const taskId = req.task.id;
 
   const task = await prisma.task.findFirst({
     where: {
@@ -145,36 +130,20 @@ exports.updateTask = catchAsync(async (req, res, next) => {
   });
 });
 exports.deleteTask = catchAsync(async (req, res, next) => {
-  const taskId = req.params.taskId;
-
-  const task = await prisma.task.findFirst({
-    where: {
-      id: taskId,
-      active: true, // Ensuring it's not already deleted
-    },
-  });
-
-  if (!task) {
-    return next(
-      new AppError(
-        "The task ID you provided is invalid or already deleted.",
-        400
-      )
-    );
-  }
+  const taskId = req.task.id;
 
   // ✅ Soft delete (if you want to keep the task in the database)
   await prisma.task.update({
-    where: { id: task.id },
+    where: { id: taskId },
     data: { active: false },
   });
 
   await notify(
     req,
-    updatedTask.assignedTo,
-    `${req.user.username} has removed the task assigned to you in project ${req.project.name} please check the updates`,
+    req.task.assignedTo,
+    `${req.user.username} has removed the task (${req.task.title}) assigned to you in project ${req.project.name} please check the updates`,
     "TASKREMOVAL",
-    task.id
+    req.task.id
   );
 
   res.status(200).json({
@@ -235,24 +204,40 @@ exports.getAllTasks = catchAsync(async (req, res, next) => {
 exports.getAssignedTasks = catchAsync(async (req, res, next) => {
   const user = req.user;
 
-  const projectMember = await prisma.projectMember.findFirst({
-    where: {
-      projectId: req.params.id,
-      userId: user.id,
-      active: true,
-      memberStatus: "JOINED",
-    },
-  });
-
-  if (!projectMember) {
-    return next(new AppError("You don't belond to that project", 403));
-  }
-
   const tasks = await prisma.task.findMany({
     where: {
       assignedTo: user.id,
       projectId: req.params.id,
       active: true,
+    },
+    orderBy: {
+      dueDate: "asc",
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      dueDate: true,
+      status: true,
+      priority: true,
+      project: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      creator: {
+        select: {
+          user: {
+            select: {
+              username: true,
+              email: true,
+              photo: true,
+            },
+          },
+        },
+      },
+      createdAt: true,
     },
   });
 
@@ -315,11 +300,15 @@ exports.checkTaskExistanceAndAccess = catchAsync(async (req, res, next) => {
     where: { id: taskId, active: true },
     select: {
       id: true,
+      assignedTo: true,
+      title: true,
     },
   });
 
   if (!task) {
-    return next(new AppError("The task id is invalid", 400));
+    return next(
+      new AppError("The task id is invalid or no longer exists", 400)
+    );
   }
 
   // Check user access
@@ -362,7 +351,6 @@ exports.managerialAccess = catchAsync(async (req, res, next) => {
 });
 
 exports.getTask = catchAsync(async (req, res, next) => {
-  console.log(req.task);
   const task = await prisma.task.findFirst({
     where: {
       id: req.task.id,
@@ -418,12 +406,14 @@ exports.updateAuthority = catchAsync(async (req, res, next) => {
   ) {
     return next(new AppError("Sorry you can't perform this action", 403));
   }
+  next();
 });
 
 exports.deleteAuthority = catchAsync(async (req, res, next) => {
   if (req.user.projectRole !== "MANAGER") {
     return next(new AppError("Sorry you can't perform this action", 403));
   }
+  next();
 });
 
 const notify = async (req, userId, message, notificationType, taskId) => {
@@ -444,6 +434,8 @@ const notify = async (req, userId, message, notificationType, taskId) => {
 };
 
 exports.doesItAssignedToMe = (req, res, next) => {
+  console.log(req.task);
+
   if (req.task.assignedTo !== req.user.id) {
     return next(
       new AppError("Sorry you are forbidden to enter that route", 403)

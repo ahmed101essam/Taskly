@@ -1,3 +1,4 @@
+const { validateProjectAccess } = require("../controllers/projectsController");
 const {
   managerialAccess,
   getAllTasks,
@@ -10,6 +11,7 @@ const {
   deleteAuthority,
   doesItAssignedToMe,
   doneTask,
+  getAssignedTasks,
 } = require("../controllers/taskController");
 const commentsRouter = require("./commentsRouter");
 const taskRouter = require("express").Router();
@@ -19,6 +21,8 @@ taskRouter
   .get(managerialAccess, getAllTasks)
   .post(managerialAccess, addTask);
 
+taskRouter.route("/mine").get(validateProjectAccess, getAssignedTasks);
+
 taskRouter
   .route("/:taskId")
   .all(checkTaskExistanceAndAccess)
@@ -26,7 +30,9 @@ taskRouter
   .patch(updateAuthority, updateTask)
   .delete(deleteAuthority, deleteTask);
 
-taskRouter.route("/:taskId/done").patch(doesItAssignedToMe, doneTask);
+taskRouter
+  .route("/:taskId/done")
+  .patch(checkTaskExistanceAndAccess, doesItAssignedToMe, doneTask);
 
 taskRouter.use("/:taskId/comments", commentsRouter);
 

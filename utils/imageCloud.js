@@ -1,37 +1,38 @@
-const fs = require('fs');
-const path = require('path');
-const cloudinary = require('cloudinary').v2;
-const AppError = require('./appError');
+const fs = require("fs");
+const path = require("path");
+const cloudinary = require("cloudinary").v2;
+const AppError = require("./appError");
 
 // Configure Cloudinary globally
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 exports.uploadImage = async (req, res, next) => {
-    try {
-        if (!req.file) {
-            return next();
-        }
+  try {
+    if (!req.file) return next();
 
-        const filePath = req.file.path;
+    // Create a unique public_id
+    const public_id = `taskly/${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
-        const result = await cloudinary.uploader.upload(filePath, {
-            folder: 'taskly',
-            format: 'webp',
-            public_id: path.parse(req.file.filename).name, // Ensure correct filename
-        });
+    // Convert Buffer to a data URI for Cloudinary
+    const dataUri = `data:${
+      req.file.mimetype
+    };base64,${req.file.buffer.toString("base64")}`;
 
-        // Remove the file from local storage after upload
-        fs.unlinkSync(filePath);
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder: "taskly",
+      format: "webp",
+      public_id: public_id,
+      resource_type: "auto",
+    });
 
-        // Store the Cloudinary image URL in request body
-        req.body.photo = result.secure_url;
-        next()
-    } catch (error) {
-        console.error(error);
-        return next(new AppError("Something went wrong while uploading the image", 500));
-    }
+    req.body.photo = result.secure_url;
+    next();
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
+    return next(new AppError("Image upload failed", 500));
+  }
 };

@@ -15,6 +15,7 @@ const {
   checkProjectExistance,
   validateProjectAccess,
   getAllMembers,
+  leaveProject,
 } = require("../controllers/projectsController");
 const { uploadImage } = require("../utils/imageCloud");
 const upload = require("../utils/multer");
@@ -43,16 +44,20 @@ projectRouter
 
 projectRouter
   .route("/:projectId/members")
-  .all(checkProjectExistance)
+  .all(checkProjectExistance, validateProjectAccess)
   .post(validateProjectAuthority, addMember)
   .get(getAllMembers);
 
 projectRouter
   .route("/:projectId/members/:memberId")
-  .all(validateProjectOwnership)
+  .all(checkProjectExistance, validateProjectOwnership)
   .delete(deleteMember)
   .patch(editMemberRole)
   .post(transferManagership);
+
+projectRouter
+  .route("/:projectId/leave")
+  .patch(checkProjectExistance, validateProjectAccess, leaveProject);
 
 projectRouter
   .route("/:projectId/invitation/accept")

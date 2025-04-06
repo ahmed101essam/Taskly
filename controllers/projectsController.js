@@ -9,14 +9,22 @@ exports.getAllMembers = catchAsync(async (req, res, next) => {
     where: {
       projectId: req.project.id,
       active: true,
-      memberStatus: "JOINED",
+    },
+    select: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          photo: true,
+        },
+      },
     },
   });
   res.status(200).json({
     data: { members },
   });
 });
-
 exports.addProject = catchAsync(async (req, res, next) => {
   const user = req.user;
 
@@ -157,30 +165,15 @@ exports.validateProjectOwnership = catchAsync(async (req, res, next) => {
   req.project = project;
   next();
 });
-
 exports.validateProjectAuthority = catchAsync(async (req, res, next) => {
   const permittedRoles = ["MANAGER", "SUPERVISOR"];
   const project = req.project;
 
-  const projectMembership = await prisma.projectMember.findFirst({
-    where: {
-      userId: req.user.id,
-      projectId: project.id,
-      active: true,
-      memberStatus: "JOINED",
-    },
-  });
-
-  if (!projectMembership) {
-    return next(new AppError("you do not belong to that project", 401));
-  }
-
-  if (!permittedRoles.includes(projectMembership.role)) {
+  if (!permittedRoles.includes(req.user.projectRole)) {
     return next(new AppError("You are forbidden to access that resource", 403));
   }
   next();
 });
-
 exports.checkProjectExistance = catchAsync(async (req, res, next) => {
   const projectId = Number(req.params.projectId); // Convert to number if needed
 
@@ -200,34 +193,31 @@ exports.checkProjectExistance = catchAsync(async (req, res, next) => {
 });
 exports.addMember = catchAsync(async (req, res, next) => {
   const memberId = Number(req.body.memberId);
-  if (!req.project.active) {
-    return next(
-      new AppError("Cannot modify members of an inactive project", 400)
-    );
-  }
 
   if (!memberId) {
     return next(new AppError("Please provide an id", 400));
   }
-  const member = await prisma.user.findFirst({
+  const member = await prisma.user.findUnique({
     where: {
       id: memberId,
-      active: true,
     },
   });
 
-  if (!member) {
+  if (!member || !member.active) {
     return next(
       new AppError("The member id is not correct or the member is not exist")
     );
   }
 
-  const alreadyInvitedUser = await prisma.projectMember.findFirst({
+  const alreadyInvitedUser = await prisma.projectMember.findUnique({
     where: {
-      userId: memberId,
-      projectId: req.project.id,
+      userId_projectId: {
+        userId: memberId,
+        projectId: req.project.id,
+      },
     },
   });
+
   let projectMember;
 
   if (alreadyInvitedUser) {
@@ -325,12 +315,18 @@ exports.editMemberRole = catchAsync(async (req, res, next) => {
     if (!allowedValues.includes(filteredBody.role)) {
       return next(new AppError("The role you want to assign is invalid", 400));
     }
+  } else {
+    return next(
+      new AppError("You can only edit the member role from that route", 400)
+    );
   }
 
   const projectMember = await prisma.projectMember.update({
     where: {
-      userId: memberId,
-      projectId: req.project.id,
+      userId_projectId: {
+        userId: memberId,
+        projectId: req.project.id,
+      },
     },
     data: {
       role: filteredBody.role,
@@ -403,6 +399,7 @@ exports.deleteMember = catchAsync(async (req, res, next) => {
     data: null,
   });
 });
+
 exports.acceptInvitation = catchAsync(async (req, res, next) => {
   const user = req.user;
   const projectId = Number(req.params.projectId);
@@ -521,6 +518,15 @@ exports.leaveProject = catchAsync(async (req, res, next) => {
     );
   }
 
+  if (projectMembership.role == "MANAGER") {
+    return next(
+      new AppError(
+        "You can not leave the project before assigning the project to another member",
+        400
+      )
+    );
+  }
+
   // Update the project membership status
   const updatedProject = await prisma.projectMember.update({
     where: {
@@ -613,19 +619,21 @@ exports.getProject = catchAsync(async (req, res, next) => {
 exports.transferManagership = catchAsync(async (req, res, next) => {
   const manager = req.user;
   const project = req.project;
-  const newManagerId = req.body.newManagerId;
+  const newManagerId = Number(req.params.memberId);
 
   if (
-    !(await prisma.projectMember.findFirst({
+    !(await prisma.projectMember.findUnique({
       where: {
-        userId: newManagerId,
-        projectId: project.id,
+        userId_projectId: {
+          userId: newManagerId,
+          projectId: project.id,
+        },
       },
     }))
   ) {
     return next(
       new AppError(
-        "You can not make a user not belongs to the proejct as a manager"
+        "You can not make a user not belongs to the project as a manager"
       )
     );
   }
@@ -641,8 +649,10 @@ exports.transferManagership = catchAsync(async (req, res, next) => {
     }),
     prisma.projectMember.update({
       where: {
-        userId: newManagerId,
-        projectId: project.id,
+        userId_projectId: {
+          userId: newManagerId,
+          projectId: req.project.id,
+        },
       },
       data: {
         role: "MANAGER",
@@ -650,8 +660,10 @@ exports.transferManagership = catchAsync(async (req, res, next) => {
     }),
     prisma.projectMember.update({
       where: {
-        userId: manager.id,
-        projectId: project.id,
+        userId_projectId: {
+          userId: req.user.id,
+          projectId: req.project.id,
+        },
       },
       data: {
         role: "MEMBER",

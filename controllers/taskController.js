@@ -196,6 +196,7 @@ exports.getAllTasks = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: {
+      projectManager: req.project.managerId,
       tasks: tasks,
     },
   });
@@ -397,6 +398,7 @@ exports.getTask = catchAsync(async (req, res, next) => {
     status: "success",
     data: {
       task: task,
+      projectManager: req.project.managerId,
     },
   });
 });

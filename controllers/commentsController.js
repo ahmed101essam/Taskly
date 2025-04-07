@@ -1,8 +1,5 @@
-const { PrismaClient } = require("@prisma/client");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
-
-const prisma = new PrismaClient();
 
 exports.addComment = catchAsync(async (req, res, next) => {
   if (!req.body.content || !req.body.content.trim()) {

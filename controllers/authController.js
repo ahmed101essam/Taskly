@@ -1,11 +1,10 @@
 const catchAsync = require("../utils/catchAsync");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const Email = require("../utils/email");
 const AppError = require("../utils/appError");
 const jsonwebtoken = require("jsonwebtoken");
+const prisma = require("../utils/database");
 
 exports.signup = catchAsync(async (req, res, next) => {
   const user = {

@@ -1,3 +1,4 @@
+const prisma = require("./utils/database");
 const Socket = require("./socket");
 const app = require("./app");
 const server = require("http").createServer(app);

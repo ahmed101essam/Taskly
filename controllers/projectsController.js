@@ -1,8 +1,6 @@
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
-const { PrismaClient } = require("@prisma/client");
 const Email = require("../utils/email");
-const prisma = new PrismaClient();
 
 exports.getAllMembers = catchAsync(async (req, res, next) => {
   const members = await prisma.projectMember.findMany({

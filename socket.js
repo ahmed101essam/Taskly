@@ -68,6 +68,9 @@ class Socket {
         where: {
           userId: userId,
         },
+        orderBy: {
+          createdAt: "desc",
+        },
       });
 
       socket.emit("notifications", notifications);

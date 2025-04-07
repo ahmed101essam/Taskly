@@ -86,10 +86,10 @@ class Socket {
       });
     });
   }
-  sendNotifications(userId, notifications) {
+  sendNotifications(userId, notification) {
     if (this.users.has(userId)) {
       this.users.get(userId).forEach((s) => {
-        s.emit("notification", notifications);
+        s.emit("notification", notification);
       });
     }
   }

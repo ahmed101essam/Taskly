@@ -14,6 +14,10 @@ exports.readNotifications = catchAsync(async (req, res, next) => {
       read: true,
     },
   });
+  res.status(200).json({
+    status: "success",
+    message: "Notifications read successfully",
+  });
 });
 
 exports.search = catchAsync(async (req, res, next) => {

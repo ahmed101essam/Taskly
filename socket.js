@@ -40,6 +40,8 @@ class Socket {
     this.io.on("connection", async (socket) => {
       console.log(`User connected: ${socket.user.id}`);
       const userId = socket.user.id;
+      console.log(this.users.has(userId));
+
       if (!this.users.has(userId)) {
         this.users.set(userId, []);
       }
@@ -72,6 +74,8 @@ class Socket {
 
       socket.on("disconnect", async () => {
         console.log("User disconnected:", socket.id);
+        console.log(this.users.get(userId));
+
         this.users.set(
           userId,
           this.users.get(userId).filter((s) => s.id === socket.id)

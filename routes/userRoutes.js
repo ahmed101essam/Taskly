@@ -7,7 +7,12 @@ const {
 } = require("../controllers/authController");
 const { getAllManagerProjects } = require("../controllers/projectsController");
 const { myTasks } = require("../controllers/taskController");
-const { me, updateMe, search } = require("../controllers/usersController");
+const {
+  me,
+  updateMe,
+  search,
+  readNotifications,
+} = require("../controllers/usersController");
 const { uploadImage } = require("../utils/imageCloud");
 const upload = require("../utils/multer");
 const { use } = require("./taskRoutes");
@@ -26,5 +31,6 @@ userRouter
   .patch(upload.single("photo"), uploadImage, updateMe);
 userRouter.get("/myProjects", protect, getAllManagerProjects);
 userRouter.get("/myTasks", protect, myTasks);
+userRouter.patch("/notifications", protect, readNotifications);
 
 module.exports = userRouter;

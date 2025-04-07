@@ -612,6 +612,7 @@ exports.getProject = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: {
+      myRole:req.user.projectRole,
       project: project,
     },
   });

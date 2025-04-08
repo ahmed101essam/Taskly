@@ -1,3 +1,5 @@
+const dotenv = require("dotenv");
+dotenv.config();
 const prisma = require("./utils/database");
 const Socket = require("./socket");
 const app = require("./app");

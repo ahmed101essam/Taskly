@@ -31,6 +31,7 @@ exports.search = catchAsync(async (req, res, next) => {
 
   const users = await prisma.user.findMany({
     where: {
+      verified: true,
       OR: [
         {
           username: {

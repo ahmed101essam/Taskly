@@ -7,7 +7,6 @@ const {
   addMember,
   deleteMember,
   acceptInvitation,
-  getAllManagerProjects,
   validateProjectAuthority,
   editMemberRole,
   transferManagership,
@@ -16,6 +15,7 @@ const {
   validateProjectAccess,
   getAllMembers,
   leaveProject,
+  getAllProjects,
 } = require("../controllers/projectsController");
 const { uploadImage } = require("../utils/imageCloud");
 const upload = require("../utils/multer");
@@ -28,7 +28,7 @@ projectRouter.use(protect);
 projectRouter
   .route("/")
   .post(upload.single("photo"), uploadImage, addProject)
-  .get(getAllManagerProjects);
+  .get(getAllProjects);
 
 projectRouter
   .route("/:projectId")

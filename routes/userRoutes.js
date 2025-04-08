@@ -5,7 +5,7 @@ const {
   protect,
   resendVerificationToken,
 } = require("../controllers/authController");
-const { getAllManagerProjects } = require("../controllers/projectsController");
+const { getAllProjects } = require("../controllers/projectsController");
 const { myTasks } = require("../controllers/taskController");
 const {
   me,
@@ -15,8 +15,6 @@ const {
 } = require("../controllers/usersController");
 const { uploadImage } = require("../utils/imageCloud");
 const upload = require("../utils/multer");
-const { use } = require("./taskRoutes");
-
 const userRouter = require("express").Router();
 
 userRouter.get("/search", protect, search);
@@ -29,7 +27,7 @@ userRouter
   .all(protect)
   .get(me)
   .patch(upload.single("photo"), uploadImage, updateMe);
-userRouter.get("/myProjects", protect, getAllManagerProjects);
+userRouter.get("/myProjects", protect, getAllProjects);
 userRouter.get("/myTasks", protect, myTasks);
 userRouter.patch("/notifications", protect, readNotifications);
 

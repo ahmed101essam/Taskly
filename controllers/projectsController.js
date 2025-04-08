@@ -109,6 +109,32 @@ exports.updateProject = catchAsync(async (req, res, next) => {
     data: filteredBody,
   });
 
+  const otherMembers = await prisma.projectMember.findMany({
+    where: {
+      projectId: project.id,
+      NOT: { userId: project.managerId },
+    },
+    select: { userId: true },
+  });
+
+  await Promise.all(
+    otherMembers.map(async (member) => {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: member.userId,
+          type: "PROJECTUPDATE",
+          message: `${req.user.username} has updated the ${project.name} project.`,
+          targetType: "PROJECT",
+          projectId: project.id,
+        },
+      });
+
+      if (req.app.get("socket")) {
+        req.app.get("socket").sendNotifications(member.userId, notification);
+      }
+    })
+  );
+
   res.status(200).json({
     status: "success",
     data: {
@@ -145,6 +171,30 @@ exports.deleteProject = catchAsync(async (req, res, next) => {
       data: { active: false },
     }),
   ]);
+  const otherMembers = await prisma.projectMember.findMany({
+    where: {
+      projectId: project.id,
+    },
+    select: { userId: true },
+  });
+
+  await Promise.all(
+    otherMembers.map(async (member) => {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: member.userId,
+          type: "PROJECTUPDATE",
+          message: `${req.user.username} has deleted the ${project.name} project.`,
+          targetType: "PROJECT",
+          projectId: project.id,
+        },
+      });
+
+      if (req.app.get("socket")) {
+        req.app.get("socket").sendNotifications(member.userId, notification);
+      }
+    })
+  );
 
   res.status(204).send(); // Proper empty response for 204 status
 });
@@ -278,7 +328,6 @@ exports.addMember = catchAsync(async (req, res, next) => {
     },
   });
 });
-
 exports.editMemberRole = catchAsync(async (req, res, next) => {
   const memberId = Number(req.params.memberId);
 
@@ -439,6 +488,22 @@ exports.acceptInvitation = catchAsync(async (req, res, next) => {
     }),
   ]);
 
+  const notification = await prisma.notification.create({
+    data: {
+      userId: req.project.managerId,
+      type: "PROJECTUPDATE",
+      message: `${req.user.username} has joined the project ${req.project.name}`,
+      targetType: "PROJECT",
+      projectId: req.project.id,
+    },
+  });
+
+  if (req.app.get("socket")) {
+    req.app
+      .get("socket")
+      .sendNotifications(req.project.managerId, notification);
+  }
+
   res.status(200).json({
     status: "success",
     data: {
@@ -471,12 +536,26 @@ exports.validateProjectAccess = catchAsync(async (req, res, next) => {
   next();
 });
 
-exports.getAllManagerProjects = catchAsync(async (req, res, next) => {
+exports.getAllProjects = catchAsync(async (req, res, next) => {
   const id = req.user.id;
 
-  const projects = await prisma.project.findMany({
+  const projectWhichiamMember = await prisma.projectMember.findMany({
     where: {
-      managerId: id,
+      userId: id,
+      active: true,
+      memberStatus: "JOINED",
+    },
+    select: {
+      projectId: true,
+      role: true,
+    },
+  });
+
+  let projects = await prisma.project.findMany({
+    where: {
+      id: {
+        in: projectWhichiamMember.map((p) => p.projectId),
+      },
       active: true,
     },
     select: {
@@ -524,6 +603,22 @@ exports.leaveProject = catchAsync(async (req, res, next) => {
         400
       )
     );
+  } else {
+    const notification = await prisma.notification.create({
+      data: {
+        userId: req.project.managerId,
+        type: "PROJECTLEAVE",
+        message: `${req.user.username} has left the project ${req.project.name}`,
+        targetType: "PROJECT",
+        projectId: req.project.id,
+      },
+    });
+
+    if (req.app.get("socket")) {
+      req.app
+        .get("socket")
+        .sendNotifications(req.project.managerId, notification);
+    }
   }
 
   // Update the project membership status
@@ -611,91 +706,119 @@ exports.getProject = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: {
-      myRole:req.user.projectRole,
+      myRole: req.user.projectRole,
       project: project,
     },
   });
 });
-
 exports.transferManagership = catchAsync(async (req, res, next) => {
-  const manager = req.user;
-  const project = req.project;
+  const { user: currentManager, project } = req;
   const newManagerId = Number(req.params.memberId);
 
-  if (
-    !(await prisma.projectMember.findUnique({
+  // Verify the new manager is a member of the project
+  const newManager = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: newManagerId,
+        projectId: project.id,
+      },
+    },
+    select: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
+
+  if (!newManager) {
+    return next(
+      new AppError(
+        "You cannot assign managership to a user who is not a project member.",
+        400
+      )
+    );
+  }
+
+  // Transfer project ownership and roles atomically
+  await prisma.$transaction([
+    prisma.project.update({
+      where: { id: project.id },
+      data: { managerId: newManagerId },
+    }),
+    prisma.projectMember.update({
       where: {
         userId_projectId: {
           userId: newManagerId,
           projectId: project.id,
         },
       },
-    }))
-  ) {
-    return next(
-      new AppError(
-        "You can not make a user not belongs to the project as a manager"
-      )
-    );
-  }
-
-  await prisma.$transaction([
-    prisma.project.update({
-      where: {
-        id: project.id,
-      },
-      data: {
-        managerId: newManagerId,
-      },
+      data: { role: "MANAGER" },
     }),
     prisma.projectMember.update({
       where: {
         userId_projectId: {
-          userId: newManagerId,
-          projectId: req.project.id,
+          userId: currentManager.id,
+          projectId: project.id,
         },
       },
-      data: {
-        role: "MANAGER",
-      },
-    }),
-    prisma.projectMember.update({
-      where: {
-        userId_projectId: {
-          userId: req.user.id,
-          projectId: req.project.id,
-        },
-      },
-      data: {
-        role: "MEMBER",
-      },
+      data: { role: "MEMBER" },
     }),
   ]);
 
-  const notification = await prisma.notification.create({
+  // Notify the new manager
+  const managerNotification = await prisma.notification.create({
     data: {
       userId: newManagerId,
       type: "PROJECTASSIGNMENT",
-      message: `You have been assigned as the manager of "${project.name}" by ${manager.firstName} ${manager.lastName}.`,
+      message: `You have been assigned as the manager of "${project.name}" by ${currentManager.firstName} ${currentManager.lastName}.`,
       targetType: "PROJECT",
       projectId: project.id,
     },
   });
 
   if (req.app.get("socket")) {
-    req.app.get("socket").sendNotifications(newManagerId, notification);
+    req.app.get("socket").sendNotifications(newManagerId, managerNotification);
   }
 
-  const projectAfterModifications = await prisma.project.findUnique({
+  // Notify the rest of the members
+  const otherMembers = await prisma.projectMember.findMany({
     where: {
-      id: project.id,
+      projectId: project.id,
+      NOT: { userId: newManagerId },
     },
+    select: { userId: true },
+  });
+
+  await Promise.all(
+    otherMembers.map(async (member) => {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: member.userId,
+          type: "PROJECTUPDATE",
+          message: `${newManager.user.username} has been assigned as the new manager of "${project.name}".`,
+          targetType: "PROJECT",
+          projectId: project.id,
+        },
+      });
+
+      if (req.app.get("socket")) {
+        req.app.get("socket").sendNotifications(member.userId, notification);
+      }
+    })
+  );
+
+  // Fetch updated project data
+  const updatedProject = await prisma.project.findUnique({
+    where: { id: project.id },
   });
 
   res.status(200).json({
     status: "success",
     data: {
-      project: projectAfterModifications,
+      project: updatedProject,
     },
   });
 });

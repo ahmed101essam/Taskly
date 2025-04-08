@@ -1,5 +1,6 @@
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+const prisma = require("../utils/database");
 
 exports.addComment = catchAsync(async (req, res, next) => {
   if (!req.body.content || !req.body.content.trim()) {

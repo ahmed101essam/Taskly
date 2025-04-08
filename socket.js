@@ -1,10 +1,9 @@
 // const Server = require("socket.io");
 const jwt = require("jsonwebtoken");
-const { PrismaClient } = require("@prisma/client");
 const AppError = require("./utils/appError");
 const catchAsyncSocket = require("./utils/catchAsyncSocket");
 
-const prisma = new PrismaClient();
+const prisma = require("./utils/database");
 
 class Socket {
   constructor(server) {

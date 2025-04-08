@@ -1,5 +1,6 @@
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
+const prisma = require("../utils/database");
 
 exports.addTask = catchAsync(async (req, res, next) => {
   let project = req.project;
